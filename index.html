@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111111">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Service">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>Bike Service Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,400..800&display=swap" rel="stylesheet">
+<style>
+/* VOICE everyday tool, workshop-precise, quiet until something is due
+   IDEA a shop service board: every part on a rail, a gauge showing life used, red tag when overdue
+   PICTURE the due board itself: rows sorted by urgency, each with a wear gauge driven by time or miles
+   COLOUR white ground, black ink, steel panels, signal red for overdue, tag yellow for due soon
+   TYPE Archivo wide 800 for title and numerals, Archivo for text
+   LAYOUT title + counts across the top, board full width, then form | log + data; stacks under 900px */
+:root{color-scheme:light dark;--bg:light-dark(#fff,#111214);--ink:light-dark(#111,#ececec);--panel:light-dark(#eef0f1,#1b1d20);--line:light-dark(#d4d8db,#2f3337);--mute:light-dark(#5d646a,#9aa1a7);--red:light-dark(#e4002b,#ff4d5e);--yel:#ffd400;--fill:light-dark(#2b2f33,#c9ced2)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 Archivo,system-ui,sans-serif;overflow-x:clip}
+.band{padding:clamp(20px,3vw,40px) max(4vw,16px,env(safe-area-inset-right,0px)) clamp(20px,3vw,40px) max(4vw,16px,env(safe-area-inset-left,0px))}
+.wrap{max-width:1240px;margin:0 auto}
+header.band{border-top:8px solid var(--ink);padding-top:calc(clamp(20px,3vw,40px) + env(safe-area-inset-top,0px));padding-bottom:16px}
+.top{display:flex;flex-wrap:wrap;gap:16px 32px;align-items:end;justify-content:space-between}
+h1{font-stretch:112%;font-weight:800;font-size:clamp(32px,4.4vw,48px);line-height:1.05;letter-spacing:-.02em;margin:0}
+.store{font-size:13px;color:var(--mute);margin-top:6px}
+.counts{display:flex;gap:8px;flex-wrap:wrap}
+.cnt{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;padding:6px 14px;min-height:44px;text-align:left;cursor:pointer;font:inherit}
+.cnt b{display:block;font-stretch:112%;font-weight:800;font-size:28px;line-height:1.1;font-variant-numeric:tabular-nums}
+.cnt span{font-size:13px;color:var(--mute)}
+.cnt[aria-pressed=true]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.cnt.over b{color:var(--red)}
+.bikebar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{font:inherit;font-weight:600;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:8px 16px;min-height:44px;cursor:pointer}
+.tab[aria-selected=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.odo{display:flex;gap:8px;align-items:center;margin-left:auto;flex-wrap:wrap}
+label{font-size:14px;font-weight:600}
+input,select,textarea{font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px;min-height:44px;width:100%}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.odo input{width:9em}
+button.b{font:inherit;font-weight:600;border:1px solid var(--ink);background:var(--ink);color:var(--bg);border-radius:8px;padding:9px 16px;min-height:44px;cursor:pointer;white-space:nowrap}
+button.g{background:transparent;color:var(--ink);border-color:var(--line)}
+button.b:hover{opacity:.88}
+#board{margin-top:4px}
+.row{display:grid;grid-template-columns:minmax(0,2.2fr) minmax(0,1.6fr) minmax(8.5em,auto) auto;gap:8px 20px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line)}
+.nm{font-weight:700;font-size:17px}
+.chip{display:inline-block;font-size:13px;font-weight:600;border:1px solid var(--line);border-radius:6px;padding:0 6px;margin-left:6px;vertical-align:2px;white-space:nowrap}
+.spec{font-size:14px;color:var(--mute)}
+.gauge{height:14px;border-radius:7px;background:var(--panel);overflow:hidden;border:1px solid var(--line)}
+.gauge i{display:block;height:100%;background:var(--fill);transition:width .5s}
+.gl{font-size:13px;color:var(--mute);margin-top:4px;white-space:nowrap}
+.due{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.due small{display:block;font-weight:400;font-size:13px;color:var(--mute)}
+.act{display:flex;gap:6px}
+.row[data-s=over] .gauge i{background:var(--red)}
+.row[data-s=over] .due{color:var(--red)}
+.row[data-s=soon] .gauge i{background:var(--yel)}
+.row[data-s=over] .nm::before,.row[data-s=soon] .nm::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:8px;vertical-align:1px;background:var(--red)}
+.row[data-s=soon] .nm::before{background:var(--yel);outline:1px solid #b89a00}
+.row[data-s=setup] .gauge{background:repeating-linear-gradient(135deg,var(--panel) 0 6px,var(--bg) 6px 12px)}
+.donep{grid-column:1/-1;display:none;flex-wrap:wrap;gap:10px;align-items:end;background:var(--panel);border-radius:10px;padding:12px}
+.donep.on{display:flex}
+.donep>div{flex:1 1 10em}
+.empty{padding:28px 0;color:var(--mute)}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(20px,4vw,56px);align-items:start}
+h2{font-stretch:112%;font-weight:800;font-size:24px;line-height:1.1;margin:0 0 14px;letter-spacing:-.01em}
+.panel{background:var(--panel);border-radius:14px;padding:clamp(16px,2.4vw,24px)}
+form{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+form .full{grid-column:1/-1}
+.hint{font-size:13px;color:var(--mute)}
+.fbtns{display:flex;gap:8px;flex-wrap:wrap}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;color:var(--mute)}
+td.d{white-space:nowrap;font-variant-numeric:tabular-nums}
+.scroll{overflow-x:auto}
+details{margin-top:18px}
+summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center}
+.data{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);border-radius:10px;padding:10px 12px 10px 16px;display:none;gap:12px;align-items:center;z-index:9;max-width:calc(100% - 32px)}
+#toast.on{display:flex}
+#toast button{font:inherit;font-weight:700;background:transparent;color:var(--yel);border:0;min-height:36px;cursor:pointer}
+@media(max-width:900px){.cols{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:640px){.row{grid-template-columns:minmax(0,1fr) auto}.row .gw{grid-column:1/-1;order:3}.row .act{grid-column:1/-1;order:4}.odo{margin-left:0}form{grid-template-columns:minmax(0,1fr)}}
+@media(prefers-reduced-motion:reduce){.gauge i{transition:none}}
+</style>
+</head>
+<body>
+<header class="band"><div class="wrap">
+  <div class="top">
+    <div><h1>Bike service board</h1><div class="store" id="store">Saved on this device</div></div>
+    <div class="counts" id="counts"></div>
+  </div>
+  <div class="bikebar">
+    <div class="tabs" id="tabs" role="tablist"></div>
+    <div class="odo" id="odoBox">
+      <label for="odo">Odometer (mi)</label>
+      <input id="odo" type="number" inputmode="decimal" min="0" step="1" placeholder="e.g. 8420">
+      <button class="b g" id="odoSave" type="button">Update</button>
+    </div>
+  </div>
+</div></header>
+
+<main class="band" style="padding-top:0"><div class="wrap">
+  <div id="board"></div>
+</div></main>
+
+<section class="band"><div class="wrap cols">
+  <div class="panel">
+    <h2 id="ftitle">Add part or task</h2>
+    <form id="f" autocomplete="off">
+      <div><label for="f-kind">Type</label><select id="f-kind"><option value="part">Part (replace)</option><option value="task">Task (service)</option></select></div>
+      <div><label for="f-cat">Category</label><select id="f-cat"></select></div>
+      <div class="full"><label for="f-name">Name</label><input id="f-name" required placeholder="Rear tire"></div>
+      <div class="full"><label for="f-spec">Make, model and specs</label><input id="f-spec" placeholder="Michelin Pro 5 TLR 700×35, tubeless"></div>
+      <div><label for="f-pos">Position</label><select id="f-pos"><option value="">—</option><option>Front</option><option>Rear</option></select></div>
+      <div><label for="f-date">Installed / last done</label><input id="f-date" type="date"></div>
+      <div><label for="f-days">Every (days)</label><input id="f-days" type="number" min="1" inputmode="numeric" placeholder="optional"></div>
+      <div><label for="f-mi">Every (miles)</label><input id="f-mi" type="number" min="1" inputmode="numeric" placeholder="optional"></div>
+      <div><label for="f-imi">Odometer at install</label><input id="f-imi" type="number" min="0" inputmode="decimal" placeholder="defaults to current"></div>
+      <div><label for="f-lead">Remind days ahead</label><input id="f-lead" type="number" min="0" value="7" inputmode="numeric"></div>
+      <div><label for="f-spares">Spares on hand</label><input id="f-spares" type="number" min="0" value="0" inputmode="numeric"></div>
+      <div class="full"><label for="f-notes">Notes</label><input id="f-notes" placeholder="Wear limit, torque, part numbers"></div>
+      <p class="hint full" style="margin:0">Category defaults are starting points: pad and tire miles assume a ~230 lb rider who descends hard. Set either interval, or both; whichever runs out first triggers the reminder.</p>
+      <div class="fbtns full"><button class="b" type="submit" id="fsave">Add to board</button><button class="b g" type="button" id="fcancel" hidden>Cancel</button><button class="b g" type="button" id="fdel" hidden>Delete</button></div>
+    </form>
+  </div>
+  <div>
+    <h2>Service log</h2>
+    <div class="scroll"><table><thead><tr><th>Date</th><th>Item</th><th>Note</th></tr></thead><tbody id="log"></tbody></table></div>
+    <details id="dataBox"><summary>Calendar, backup and bikes</summary>
+      <p class="hint">Export puts every upcoming due date in your calendar with an alert, so reminders reach your phone. Re-export after changes.</p>
+      <div class="data">
+        <button class="b" type="button" id="ics">Export calendar (.ics)</button>
+        <button class="b g" type="button" id="dlJson">Download backup</button>
+        <button class="b g" type="button" id="copyJson">Copy backup</button>
+      </div>
+      <label for="impFile" style="display:block;margin-top:14px">Restore from a backup file</label>
+      <input id="impFile" type="file" accept=".json,application/json">
+      <label for="imp" style="display:block;margin-top:14px">Or paste backup JSON</label>
+      <textarea id="imp" rows="3" placeholder="Paste backup JSON"></textarea>
+      <div class="data"><button class="b g" type="button" id="impBtn">Restore</button></div>
+      <label for="bname" style="display:block;margin-top:14px">Rename or remove this bike</label>
+      <div class="data"><input id="bname" style="flex:1 1 12em"><button class="b g" type="button" id="bren">Rename</button><button class="b g" type="button" id="bdel">Remove bike</button></div>
+      <p class="hint" id="dmsg"></p>
+    </details>
+  </div>
+</div></section>
+<div id="toast" role="status"><span id="tmsg"></span><button type="button" id="undo">Undo</button></div>
+
+<script>
+{
+const $=id=>document.getElementById(id);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Math.random().toString(36).slice(2,10);
+const p2=n=>String(n).padStart(2,'0');
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())};
+const dnum=s=>{const[y,m,d]=s.split('-').map(Number);return Date.UTC(y,m-1,d)/864e5};
+const addDays=(s,n)=>new Date((dnum(s)+n)*864e5).toISOString().slice(0,10);
+const fmt=s=>s?new Date(dnum(s)*864e5).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'}):'';
+const num=v=>v===''||v==null||isNaN(+v)?null:+v;
+
+/* Category presets: [label, kind, days, front mi, rear mi, lead] */
+const CATS=[
+ ['Tire','part',null,4000,2500,14],['Brake pads','part',null,1200,2000,7],['Tubeless sealant','task',60,null,null,7],
+ ['Brake bleed','task',365,null,null,14],['Pad and rotor check','task',30,null,null,3],['Chain','part',null,2000,2000,7],
+ ['Chain wear check','task',30,null,null,3],['Cassette','part',null,6000,6000,14],['Bar tape','part',365,null,null,14],
+ ['Cables and housing','part',365,null,null,14],['Valve cores','part',180,null,null,7],['Other','task',null,null,null,7]];
+const STARTER=[
+ {kind:'task',cat:'Pad and rotor check',name:'Check pad thickness (3.0 mm min)',days:30,date:'today',lead:3},
+ {kind:'task',cat:'Brake bleed',name:'Bleed brakes',spec:'SRAM DOT 5.1',days:365,lead:14},
+ {kind:'task',cat:'Chain wear check',name:'Check chain wear',days:30,date:'today',lead:3},
+ {kind:'task',cat:'Tubeless sealant',name:'Top up sealant',spec:'Peaty’s Holeshot Biofibre, ~20 ml per tire',days:60,lead:7}];
+
+let S={v:1,bikes:[],items:[],log:[]};
+let cur=null,filter='all',editing=null,openDone=null,prev=null,db=null,ref=null;
+
+const bike=()=>S.bikes.find(b=>b.id===cur)||S.bikes[0];
+const bikeOf=it=>S.bikes.find(b=>b.id===it.bike);
+
+function stat(it){
+  const b=bikeOf(it),t=dnum(today());let pt=null,dl=null,due=null,pm=null,ml=null;
+  if(it.days&&it.date){const e=t-dnum(it.date);pt=e/it.days;dl=it.days-e;due=addDays(it.date,it.days)}
+  if(it.mi&&it.imi!=null&&b&&b.odo!=null){const u=b.odo-it.imi;pm=u/it.mi;ml=Math.round(it.mi-u)}
+  if(pt==null&&pm==null)return{s:'setup',pct:0,dl,ml,due};
+  const pct=Math.max(pt??-1,pm??-1),lead=it.lead??7;
+  const s=pct>=1?'over':((dl!=null&&dl<=lead)||(ml!=null&&ml<=it.mi*.1))?'soon':'ok';
+  return{s,pct:Math.max(0,pct),dl,ml,due,by:(pm??-1)>(pt??-1)?'miles':'time'};
+}
+const ORDER={over:0,soon:1,setup:2,ok:3};
+
+/* ---------- storage (this device) ---------- */
+const LK='bsb-cache-v1';
+function setStore(t){$('store').textContent=t}
+function persist(){
+  try{localStorage.setItem(LK,JSON.stringify(S));setStore('Saved on this device')}
+  catch(e){setStore('Could not save on this device: download a backup')}
+}
+function change(fn,msg){
+  prev=JSON.stringify(S);fn();persist();render();if(msg)toast(msg);
+}
+function toast(m){$('tmsg').textContent=m;$('toast').classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>$('toast').classList.remove('on'),6000)}
+$('undo').onclick=()=>{if(!prev)return;S=JSON.parse(prev);prev=null;persist();render();$('toast').classList.remove('on')};
+
+/* ---------- render ---------- */
+function render(){
+  if(!S.bikes.length){cur=null}else if(!S.bikes.some(b=>b.id===cur))cur=S.bikes[0].id;
+  const b=bike();
+  $('tabs').innerHTML=S.bikes.map(x=>`<button class="tab" role="tab" data-b="${esc(x.id)}" aria-selected="${x.id===cur}">${esc(x.name)}</button>`).join('')+
+    `<button class="tab" id="addBike" type="button">+ Bike</button>`;
+  $('odoBox').style.display=b?'':'none';
+  if(b&&document.activeElement!==$('odo'))$('odo').value=b.odo??'';
+  if(b&&document.activeElement!==$('bname'))$('bname').value=b.name;
+  const items=b?S.items.filter(i=>i.bike===b.id).map(i=>({i,r:stat(i)})):[];
+  const c={over:0,soon:0,ok:0,setup:0};items.forEach(x=>c[x.r.s]++);
+  $('counts').innerHTML=[['over','Overdue',c.over],['soon','Due soon',c.soon],['setup','Needs date',c.setup],['all','All items',items.length]]
+    .filter(x=>x[0]!=='setup'||x[2]).map(([k,l,n])=>`<button type="button" class="cnt ${k}" data-f="${k}" aria-pressed="${filter===k}"><b>${n}</b><span>${l}</span></button>`).join('');
+  const list=items.filter(x=>filter==='all'||x.r.s===filter).sort((a,z)=>ORDER[a.r.s]-ORDER[z.r.s]||z.r.pct-a.r.pct);
+  if(!b){$('board').innerHTML=`<div class="empty"><h2>Add your first bike</h2><div class="data"><input id="nb" placeholder="Bike name, e.g. Road bike" style="flex:1 1 14em"><button class="b" type="button" id="nbBtn">Add bike</button></div></div>`}
+  else if(!items.length){$('board').innerHTML=`<div class="empty"><p>No parts or tasks for ${esc(b.name)} yet. Add them below, or start with the standard checks.</p><button class="b" type="button" id="starter">Add starter checks</button></div>`}
+  else if(!list.length){$('board').innerHTML=`<div class="empty">Nothing in this view. <button class="b g" type="button" data-f="all">Show all</button></div>`}
+  else $('board').innerHTML=list.map(({i,r})=>row(i,r)).join('');
+  const lg=S.log.filter(l=>!b||l.bike===b.id).slice(0,40);
+  $('log').innerHTML=lg.length?lg.map(l=>`<tr><td class="d">${esc(fmt(l.date))}</td><td>${esc(l.name)}${l.mi!=null?` <span class="spec">@ ${esc(l.mi)} mi</span>`:''}</td><td>${esc(l.note)}</td></tr>`).join(''):`<tr><td colspan="3" class="spec">Completed services will appear here.</td></tr>`;
+}
+function row(i,r){
+  let due,sub;
+  if(r.s==='setup'){due='Set a date';sub=i.mi?'or enter odometer':'no start date'}
+  else{
+    const parts=[];if(r.dl!=null)parts.push(r.dl<0?`${-r.dl} d over`:`${r.dl} d`);if(r.ml!=null)parts.push(r.ml<0?`${-r.ml} mi over`:`${r.ml} mi`);
+    due=r.s==='over'?parts.filter(p=>p.includes('over')).join(' · ')||'Overdue':parts.join(' · ')+' left';
+    sub=r.due?`Due ${fmt(r.due)}`:`Since ${i.imi} mi`;
+  }
+  const pc=Math.min(100,Math.round(r.pct*100));
+  const gl=r.s==='setup'?'Waiting for a start point':`${pc}% used${r.by?` · by ${r.by}`:''}${i.spares?` · ${i.spares} spare${i.spares>1?'s':''}`:''}`;
+  return `<div class="row" data-s="${r.s}" data-id="${esc(i.id)}">
+  <div><div class="nm">${esc(i.name)}${i.pos?`<span class="chip">${esc(i.pos)}</span>`:''}</div><div class="spec">${esc([i.spec,i.cat].filter(Boolean).join(' · '))}</div></div>
+  <div class="gw"><div class="gauge" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pc}" aria-label="Life used"><i style="width:${pc}%"></i></div><div class="gl">${esc(gl)}</div></div>
+  <div class="due">${esc(due)}<small>${esc(sub)}</small></div>
+  <div class="act"><button class="b" type="button" data-a="done">${i.kind==='part'?'Replaced':'Done'}</button><button class="b g" type="button" data-a="edit">Edit</button></div>
+  <div class="donep${openDone===i.id?' on':''}"><div><label for="dd-${esc(i.id)}">Date</label><input type="date" id="dd-${esc(i.id)}" value="${today()}"></div>
+   <div style="flex:2 1 14em"><label for="dn-${esc(i.id)}">Note</label><input id="dn-${esc(i.id)}" placeholder="${i.kind==='part'?'New part, measurement':'e.g. front 3.6 mm, rear 4.1 mm'}"></div>
+   <button class="b" type="button" data-a="confirm">Log it</button><button class="b g" type="button" data-a="close">Cancel</button></div>
+</div>`;
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click',e=>{
+  const t=e.target.closest('button');if(!t)return;
+  if(t.dataset.f){filter=filter===t.dataset.f&&t.dataset.f!=='all'?'all':t.dataset.f;render();return}
+  if(t.dataset.b){cur=t.dataset.b;filter='all';resetForm();render();return}
+  if(t.id==='addBike'){if($('nb2'))$('nb2').focus();else prompt_();return}
+  if(t.id==='nbBtn'){const n=$('nb').value.trim();if(!n)return;const id=uid();change(()=>{S.bikes.push({id,name:n,odo:null})});cur=id;render();return}
+  if(t.id==='starter'){const b=bike();change(()=>{STARTER.forEach(s=>S.items.push({id:uid(),bike:b.id,pos:'',spares:0,notes:'',mi:null,imi:null,spec:'',...s,date:s.date==='today'?today():null}))},'Starter checks added');return}
+  const rowEl=t.closest('.row');if(!rowEl)return;
+  const it=S.items.find(x=>x.id===rowEl.dataset.id);if(!it)return;
+  const a=t.dataset.a;
+  if(a==='done'){openDone=openDone===it.id?null:it.id;render();if(openDone)$('dn-'+it.id)?.focus();}
+  else if(a==='close'){openDone=null;render()}
+  else if(a==='edit')startEdit(it);
+  else if(a==='confirm'){
+    const d=$('dd-'+it.id).value||today(),note=$('dn-'+it.id).value.trim(),b=bikeOf(it);
+    openDone=null;
+    change(()=>{
+      it.date=d;if(b&&b.odo!=null)it.imi=b.odo;
+      if(it.kind==='part'&&it.spares>0)it.spares--;
+      S.log.unshift({id:uid(),bike:it.bike,item:it.id,name:it.name+(it.pos?` (${it.pos})`:''),date:d,note,mi:b?.odo??null});
+      S.log.sort((x,y)=>y.date<x.date?-1:y.date>x.date?1:0);S.log=S.log.slice(0,400);
+    },`${it.name} logged`);
+  }
+});
+function prompt_(){
+  const n=document.createElement('div');n.className='data';n.innerHTML=`<input id="nb2" placeholder="New bike name" style="flex:1 1 12em"><button class="b" type="button" id="nb2b">Add</button>`;
+  $('tabs').after(n);$('nb2').focus();
+  $('nb2b').onclick=()=>{const v=$('nb2').value.trim();if(!v)return;const id=uid();change(()=>S.bikes.push({id,name:v,odo:null}));cur=id;n.remove();render()};
+}
+$('odoSave').onclick=()=>{const b=bike(),v=num($('odo').value);if(!b||v==null)return;change(()=>{b.odo=v},`Odometer set to ${v} mi`)};
+$('odo').addEventListener('keydown',e=>{if(e.key==='Enter')$('odoSave').click()});
+$('bren').onclick=()=>{const b=bike(),v=$('bname').value.trim();if(b&&v)change(()=>{b.name=v},'Bike renamed')};
+$('bdel').onclick=()=>{const b=bike();if(!b)return;
+  if($('bdel').dataset.arm!=='1'){$('bdel').dataset.arm='1';$('bdel').textContent='Click again to remove';setTimeout(()=>{$('bdel').dataset.arm='';$('bdel').textContent='Remove bike'},4000);return}
+  $('bdel').dataset.arm='';$('bdel').textContent='Remove bike';
+  change(()=>{S.items=S.items.filter(i=>i.bike!==b.id);S.bikes=S.bikes.filter(x=>x.id!==b.id)},`${b.name} removed`)};
+
+/* ---------- form ---------- */
+$('f-cat').innerHTML=CATS.map(c=>`<option>${esc(c[0])}</option>`).join('');
+function applyCat(){
+  const c=CATS.find(x=>x[0]===$('f-cat').value);if(!c||editing)return;
+  $('f-kind').value=c[1];const rear=$('f-pos').value==='Rear';
+  $('f-days').value=c[2]??'';$('f-mi').value=(rear?c[4]:c[3])??'';$('f-lead').value=c[5];
+  if(!$('f-name').value||$('f-name').dataset.auto==='1'){$('f-name').value=c[0];$('f-name').dataset.auto='1'}
+}
+$('f-cat').onchange=applyCat;$('f-pos').onchange=applyCat;
+$('f-name').oninput=()=>{$('f-name').dataset.auto=''};
+function resetForm(){editing=null;$('f').reset();$('f-lead').value=7;$('f-spares').value=0;$('ftitle').textContent='Add part or task';$('fsave').textContent='Add to board';$('fcancel').hidden=true;$('fdel').hidden=true;$('f-date').value=today();$('f-cat').value='Tire';$('f-name').dataset.auto='1';$('f-name').value='';applyCat()}
+function startEdit(it){
+  editing=it.id;
+  const m={kind:it.kind,cat:it.cat,name:it.name,spec:it.spec,pos:it.pos,date:it.date,days:it.days,mi:it.mi,imi:it.imi,lead:it.lead,spares:it.spares,notes:it.notes};
+  for(const k in m){const el=$('f-'+k);if(el){if(k==='cat'&&!CATS.some(c=>c[0]===m.cat))el.value='Other';else el.value=m[k]??''}}
+  $('ftitle').textContent='Edit '+it.name;$('fsave').textContent='Save changes';$('fcancel').hidden=false;$('fdel').hidden=false;
+  $('f').scrollIntoView({behavior:'smooth',block:'start'});
+}
+$('fcancel').onclick=resetForm;
+$('fdel').onclick=()=>{
+  if($('fdel').dataset.arm!=='1'){$('fdel').dataset.arm='1';$('fdel').textContent='Click again to delete';setTimeout(()=>{$('fdel').dataset.arm='';$('fdel').textContent='Delete'},4000);return}
+  $('fdel').dataset.arm='';$('fdel').textContent='Delete';const id=editing,n=$('f-name').value;
+  change(()=>{S.items=S.items.filter(i=>i.id!==id)},`${n} deleted`);resetForm();
+};
+$('f').addEventListener('submit',e=>{
+  e.preventDefault();const b=bike();if(!b){toast('Add a bike first');return}
+  const v={kind:$('f-kind').value,cat:$('f-cat').value,name:$('f-name').value.trim(),spec:$('f-spec').value.trim(),pos:$('f-pos').value,
+    date:$('f-date').value||null,days:num($('f-days').value),mi:num($('f-mi').value),imi:num($('f-imi').value),lead:num($('f-lead').value)??7,
+    spares:num($('f-spares').value)??0,notes:$('f-notes').value.trim()};
+  if(!v.name)return;
+  if(v.mi&&v.imi==null&&b.odo!=null)v.imi=b.odo;
+  if(editing){const it=S.items.find(i=>i.id===editing);change(()=>Object.assign(it,v),`${v.name} updated`)}
+  else change(()=>S.items.push({id:uid(),bike:b.id,...v}),`${v.name} added`);
+  resetForm();
+});
+
+/* ---------- calendar + backup ---------- */
+function icsText(){
+  const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Longday Werk//Bike Service Board//EN','CALSCALE:GREGORIAN'];
+  const ie=s=>String(s).replace(/[\\;,]/g,m=>'\\'+m).replace(/\n/g,'\\n');
+  const stamp=new Date().toISOString().replace(/[-:]/g,'').slice(0,15)+'Z';
+  S.items.forEach(it=>{const r=stat(it);if(!r.due)return;const b=bikeOf(it);
+    const d=r.s==='over'?today():r.due;
+    L.push('BEGIN:VEVENT',`UID:${it.id}-${r.due}@bike-service-board`,`DTSTAMP:${stamp}`,`DTSTART;VALUE=DATE:${d.replace(/-/g,'')}`,`DTEND;VALUE=DATE:${addDays(d,1).replace(/-/g,'')}`,
+      `SUMMARY:${ie((r.s==='over'?'OVERDUE: ':'')+it.name+(it.pos?' ('+it.pos+')':'')+' – '+(b?b.name:''))}`,`DESCRIPTION:${ie([it.spec,it.notes].filter(Boolean).join(' | '))}`,
+      'BEGIN:VALARM','ACTION:DISPLAY',`DESCRIPTION:${ie(it.name)}`,`TRIGGER:-P${Math.max(0,it.lead??7)}D`,'END:VALARM','END:VEVENT')});
+  L.push('END:VCALENDAR');return L.join('\r\n');
+}
+$('ics').onclick=async()=>{
+  const txt=icsText(),n=(txt.match(/BEGIN:VEVENT/g)||[]).length;
+  if(!n){$('dmsg').textContent='No items with a time-based due date yet.';return}
+  save('bike-service.ics',txt,'text/calendar');
+  $('dmsg').textContent=`Exported ${n} reminder${n>1?'s':''}. Open the file to add them to your calendar.`;
+};
+function save(name,txt,type){
+  const u=URL.createObjectURL(new Blob([txt],{type}));const a=document.createElement('a');
+  a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);
+}
+$('dlJson').onclick=()=>{save(`bike-service-backup-${today()}.json`,JSON.stringify(S,null,1),'application/json');$('dmsg').textContent='Backup downloaded.'};
+$('impFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;$('imp').value=await f.text();$('impBtn').click();e.target.value=''};
+$('copyJson').onclick=async()=>{try{await navigator.clipboard.writeText(JSON.stringify(S));$('dmsg').textContent='Backup copied.'}catch(e){$('imp').value=JSON.stringify(S);$('dmsg').textContent='Backup placed in the box above; copy it from there.'}};
+$('impBtn').onclick=()=>{try{const d=JSON.parse($('imp').value);if(!Array.isArray(d.bikes)||!Array.isArray(d.items))throw 0;d.log=Array.isArray(d.log)?d.log:[];change(()=>{S=d},'Backup restored');$('imp').value=''}catch(e){$('dmsg').textContent='That is not a valid backup.'}};
+
+/* ---------- boot ---------- */
+try{const c=JSON.parse(localStorage.getItem(LK)||'null');if(c&&Array.isArray(c.bikes))S=c}catch(e){}
+resetForm();render();setStore(S.bikes.length?'Saved on this device':'Nothing saved yet');
+try{navigator.storage?.persist?.()}catch(e){}
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!document.activeElement?.matches('input,textarea,select'))render()});
+setInterval(()=>{if(document.visibilityState==='visible'&&!document.activeElement?.matches('input,textarea,select'))render()},3600000);
+}
+</script>
+</body>
+</html>
